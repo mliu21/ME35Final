@@ -1,0 +1,55 @@
+from machine import Pin, time_pulse_us
+import time
+
+# Pin assignment
+TRIG_PIN = 5
+ECHO_PIN = 4
+LED_PIN  = 2
+BUTTON_PIN = 32  # COM goes here
+
+# Using internal pull-up since button goes to GND when pressed
+button = Pin(BUTTON_PIN, Pin.IN, Pin.PULL_UP)
+trig = Pin(TRIG_PIN, Pin.OUT)
+echo = Pin(ECHO_PIN, Pin.IN)
+led  = Pin(LED_PIN, Pin.OUT)
+
+def measure_distance_cm():
+    # Ensure trigger is low
+    trig.value(0)
+    time.sleep_us(5)
+    # Send 10us pulse to trigger
+    trig.value(1)
+    time.sleep_us(10)
+    trig.value(0)
+    # Measure the length of echo pulse
+    duration = time_pulse_us(echo, 1, 30000)  # timeout 30 ms
+    if duration < 0:  # timeout or invalid
+        return None
+    
+    # Convert time to distance:
+    # speed of sound = 343 m/s → round trip
+    distance_cm = duration / 58
+    return distance_cm
+
+# LED always on initially
+led.value(1)
+
+while True:
+    # Check if button is pressed (reads 0 when pressed due to pull-up)
+    if button.value() == 0:
+        # Read and print distance
+        d = measure_distance_cm()
+        if d is None:
+            print("Out of range")
+        else:
+            print("Distance:", round(d, 1), "cm")
+        
+        # Flash LED while button is held
+        led.value(0)
+        time.sleep(0.1)
+        led.value(1)
+        time.sleep(0.1)
+    else:
+        # Button not pressed - LED stays on
+        led.value(1)
+        time.sleep(0.05)  # Small delay to avoid CPU hogging
